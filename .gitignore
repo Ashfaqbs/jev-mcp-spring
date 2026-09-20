@@ -1,0 +1,7 @@
+target/
+*.class
+/apache-maven-*/
+.idea/
+*.iml
+.vscode/
+.DS_Store

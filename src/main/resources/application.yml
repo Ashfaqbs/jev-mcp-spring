@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: jev-mcp-spring
+  ai:
+    mcp:
+      server:
+        name: jev-mcp-spring
+        version: 0.1.0
+        protocol: STREAMABLE
+        instructions: >
+          Typed judgments over a closed answer set using TypeSafe Jev: classification,
+          scoring against an ordered rubric, and reusable yes/no checks. Not for text
+          generation, numeric extraction, or open-ended answers.
+
+# Jev reads TYPESAFE_API_KEY automatically; see jev-spring-boot-starter's own
+# properties (jev.api-key, jev.base-url, jev.model) for overrides.
