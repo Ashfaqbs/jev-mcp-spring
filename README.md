@@ -12,6 +12,11 @@ it's the first Java-based MCP server for Jev — the existing [`jev-mcp`](https:
 is a Python/stdio implementation with a broader tool surface; this project covers a subset over
 HTTP, for the Java/Spring side of the ecosystem.
 
+You must hold your own valid TypeSafe account and API key to run this server, and you're
+responsible for using it in accordance with [TypeSafe's own terms](https://typesafe.ai/legal/terms).
+This project only forwards calls made with credentials you supply — it does not provide, proxy, or
+resell access to TypeSafe's Services on anyone else's behalf.
+
 ## Why this exists
 
 - [`typesafe-sdk-java`](https://github.com/Premo-Cloud/typesafe-sdk-java) and
