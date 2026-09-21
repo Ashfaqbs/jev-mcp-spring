@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -41,11 +42,9 @@ class JevToolsTests {
         var result = tools.classify("Charged twice", Map.of("billing", "Payments", "support", "Other"),
                 "Which team?");
 
-        assertThat(result.ok()).isTrue();
         assertThat(result.label()).isEqualTo("billing");
         assertThat(result.confidence()).isEqualTo(0.9);
         assertThat(result.probabilities()).containsEntry("billing", 0.9);
-        assertThat(result.error()).isNull();
     }
 
     @Test
@@ -60,7 +59,6 @@ class JevToolsTests {
 
         var result = tools.score("Server is down for everyone", List.of("Low", "Medium", "High"), "How severe?");
 
-        assertThat(result.ok()).isTrue();
         assertThat(result.score()).isEqualTo(1.6);
         assertThat(result.legend()).containsEntry("2", "High");
     }
@@ -91,21 +89,20 @@ class JevToolsTests {
 
         var result = tools.health();
 
-        assertThat(result.ok()).isTrue();
         assertThat(result.model()).isEqualTo("jev-1.13.0");
         assertThat(result.latencyMillis()).isGreaterThanOrEqualTo(0L);
     }
 
     @Test
-    void failuresReturnASafeEnvelopeInsteadOfThrowing() {
+    void failuresThrowASanitizedExceptionInsteadOfLeakingTheResponseBody() {
         server.expect(requestTo("https://api.typesafe.ai/v1/systemone"))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body("{\"error\":\"slow down\"}")
                         .contentType(MediaType.APPLICATION_JSON));
 
-        var result = tools.classify("x", Map.of("a", "A", "b", "B"), "Which?");
-
-        assertThat(result.ok()).isFalse();
-        assertThat(result.error()).contains("429").doesNotContain("slow down");
+        assertThatThrownBy(() -> tools.classify("x", Map.of("a", "A", "b", "B"), "Which?"))
+                .isInstanceOf(JevToolException.class)
+                .hasMessageContaining("429")
+                .hasMessageNotContaining("slow down");
     }
 
     private static String noulResponse(double probability) {

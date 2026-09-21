@@ -33,8 +33,9 @@ to close that gap.
 | `jev_check` | A reusable yes/no question | probability of yes, and a `flag` / `uncertain` / `clear` band |
 | `jev_health` | Connectivity check | resolved model, round-trip latency |
 
-Every tool returns `{"ok": true, ...}` on success or `{"ok": false, "error": "..."}` on failure — no
-response body or stack trace is echoed back, only a short, safe message.
+On success each tool returns its typed result directly. On failure the tool call fails at the MCP
+protocol level (`isError: true`) with a short, safe message — no response body or stack trace is
+ever echoed back.
 
 **Not implemented yet** (tracked as follow-ups, not silently missing): `jev_ask` (Jev's fully
 generic, mixed-question-type call — the fixed-shape tools above cover the common cases first),

@@ -36,9 +36,9 @@ public class JevTools {
         try {
             var response = jev.evaluate(state, Map.of("label", Question.choice(question, labels)));
             var answer = response.choice("label");
-            return ClassifyResult.success(answer.choice(), answer.confidence(), answer.probabilities());
+            return new ClassifyResult(answer.choice(), answer.confidence(), answer.probabilities());
         } catch (Exception exception) {
-            return ClassifyResult.failure(errorMessage(exception));
+            throw new JevToolException(errorMessage(exception));
         }
     }
 
@@ -53,9 +53,9 @@ public class JevTools {
         try {
             var response = jev.evaluate(state, Map.of("level", Question.score(question, levels)));
             var answer = response.score("level");
-            return ScoreResult.success(answer.score(), answer.confidence(), answer.probabilities(), answer.legend());
+            return new ScoreResult(answer.score(), answer.confidence(), answer.probabilities(), answer.legend());
         } catch (Exception exception) {
-            return ScoreResult.failure(errorMessage(exception));
+            throw new JevToolException(errorMessage(exception));
         }
     }
 
@@ -73,9 +73,9 @@ public class JevTools {
                     : Question.noul(question, whenTrue, whenFalse);
             var response = jev.evaluate(state, Map.of("result", noulQuestion));
             double probability = response.noul("result").noul();
-            return CheckResult.success(probability, band(probability));
+            return new CheckResult(probability, band(probability));
         } catch (Exception exception) {
-            return CheckResult.failure(errorMessage(exception));
+            throw new JevToolException(errorMessage(exception));
         }
     }
 
@@ -86,9 +86,9 @@ public class JevTools {
             long started = System.nanoTime();
             var response = jev.evaluate("health check", Map.of("result", Question.noul("Is this a health check?")));
             long latencyMillis = (System.nanoTime() - started) / 1_000_000;
-            return HealthResult.success(response.model(), latencyMillis);
+            return new HealthResult(response.model(), latencyMillis);
         } catch (Exception exception) {
-            return HealthResult.failure(errorMessage(exception));
+            throw new JevToolException(errorMessage(exception));
         }
     }
 
