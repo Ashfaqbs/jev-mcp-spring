@@ -8,9 +8,11 @@ over HTTP (Streamable/SSE), for MCP clients that can reach a running service rat
 local stdio subprocess.
 
 This is an independent community project, not affiliated with TypeSafe AI. As far as I've found,
-it's the first Java-based MCP server for Jev — the existing [`jev-mcp`](https://github.com/blakestone-x/jev-mcp)
-is a Python/stdio implementation with a broader tool surface; this project covers a subset over
-HTTP, for the Java/Spring side of the ecosystem.
+it's the first Java-based MCP server for Jev. Two existing `jev-mcp` projects cover Python/Node
+instead: [`blakestone-x/jev-mcp`](https://github.com/blakestone-x/jev-mcp) (Python/stdio) and
+[`jkudish/jev-mcp`](https://github.com/jkudish/jev-mcp) (TypeScript/npm, a broader ten-tool
+agent-workflow surface including diff review and completion-claim gating). This project covers a
+subset over HTTP, for the Java/Spring side of the ecosystem.
 
 You must hold your own valid TypeSafe account and API key to run this server, and you're
 responsible for using it in accordance with [TypeSafe's own terms](https://typesafe.ai/legal/terms).
@@ -36,6 +38,7 @@ to close that gap.
 | `jev_classify` | Classify state into one of the given labels | label, confidence, probabilities |
 | `jev_score` | Rate state against an ordered rubric | weighted zero-based score, confidence, legend |
 | `jev_check` | A reusable yes/no question | probability of yes, and a `flag` / `uncertain` / `clear` band |
+| `jev_gate` | Gate a patch before merge: verify completion claims against a diff and evidence, score merge risk | per-claim verdicts, risk level, `pass` / `review` decision |
 | `jev_health` | Connectivity check | resolved model, round-trip latency |
 
 On success each tool returns its typed result directly. On failure the tool call fails at the MCP

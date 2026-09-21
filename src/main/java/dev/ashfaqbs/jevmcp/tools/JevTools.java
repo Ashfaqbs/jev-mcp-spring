@@ -9,6 +9,8 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +20,7 @@ public class JevTools {
 
     private static final double FLAG_THRESHOLD = 0.70;
     private static final double UNCERTAIN_MIN = 0.30;
+    private static final List<String> RISK_LEVELS = List.of("Low", "Medium", "High");
 
     private final JevClient jev;
 
@@ -79,6 +82,44 @@ public class JevTools {
         }
     }
 
+    @McpTool(name = "jev_gate",
+            description = "Gate a patch before merge: verify each completion claim against the diff and the "
+                    + "evidence supplied (e.g. test output), and score the diff's merge risk. Returns a verdict "
+                    + "per claim plus an overall pass/review recommendation. Not for text generation.")
+    public GateResult gate(
+            @McpToolParam(description = "The diff or patch text", required = true) String diff,
+            @McpToolParam(description = "Evidence supporting the claims, e.g. test output or CI logs",
+                    required = true) String evidence,
+            @McpToolParam(description = "Completion claims to verify, e.g. 'all tests pass'", required = true)
+            List<String> claims) {
+        try {
+            var state = "Diff:\n" + diff + "\n\nEvidence:\n" + evidence;
+            Map<String, Question> questions = new LinkedHashMap<>();
+            for (int i = 0; i < claims.size(); i++) {
+                questions.put(claimKey(i), Question.noul(
+                        "Is this claim true, based on the diff and evidence: \"" + claims.get(i) + "\"?"));
+            }
+            questions.put("risk", Question.score("How risky is this diff to merge?", RISK_LEVELS));
+            var response = jev.evaluate(state, questions);
+
+            var verdicts = new ArrayList<GateResult.ClaimVerdict>();
+            boolean allSupported = true;
+            for (int i = 0; i < claims.size(); i++) {
+                double probability = response.noul(claimKey(i)).noul();
+                boolean supported = probability >= FLAG_THRESHOLD;
+                allSupported = allSupported && supported;
+                verdicts.add(new GateResult.ClaimVerdict(claims.get(i), supported, probability));
+            }
+
+            var riskAnswer = response.score("risk");
+            String riskLevel = String.valueOf(riskAnswer.legend().get(String.valueOf(Math.round(riskAnswer.score()))));
+            String decision = (allSupported && !"High".equals(riskLevel)) ? "pass" : "review";
+            return new GateResult(decision, List.copyOf(verdicts), riskLevel, riskAnswer.confidence());
+        } catch (Exception exception) {
+            throw new JevToolException(errorMessage(exception));
+        }
+    }
+
     @McpTool(name = "jev_health",
             description = "Check connectivity to Jev and report the resolved model and round-trip latency.")
     public HealthResult health() {
@@ -90,6 +131,10 @@ public class JevTools {
         } catch (Exception exception) {
             throw new JevToolException(errorMessage(exception));
         }
+    }
+
+    private static String claimKey(int index) {
+        return "claim" + index;
     }
 
     private static String band(double probability) {

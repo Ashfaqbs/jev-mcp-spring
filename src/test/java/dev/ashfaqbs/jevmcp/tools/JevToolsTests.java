@@ -94,6 +94,46 @@ class JevToolsTests {
     }
 
     @Test
+    void gatePassesWhenClaimsAreSupportedAndRiskIsNotHigh() {
+        server.expect(requestTo("https://api.typesafe.ai/v1/systemone"))
+                .andRespond(withSuccess("""
+                        {"model":"jev-latest","answers":{
+                          "claim0":{"type":"noul","noul":0.95},
+                          "risk":{"type":"score","score":0.4,"confidence":0.8,
+                            "probabilities":{"0":0.7,"1":0.2,"2":0.1},
+                            "legend":{"0":"Low","1":"Medium","2":"High"}}},
+                         "usage":{"input_tokens":1,"output_tokens":1}}
+                        """, MediaType.APPLICATION_JSON));
+
+        var result = tools.gate("diff --git a/x.java b/x.java", "12 tests passed, 0 failed",
+                List.of("all tests pass"));
+
+        assertThat(result.decision()).isEqualTo("pass");
+        assertThat(result.riskLevel()).isEqualTo("Low");
+        assertThat(result.claims()).hasSize(1);
+        assertThat(result.claims().get(0).supported()).isTrue();
+    }
+
+    @Test
+    void gateSendsForReviewWhenAClaimIsUnsupported() {
+        server.expect(requestTo("https://api.typesafe.ai/v1/systemone"))
+                .andRespond(withSuccess("""
+                        {"model":"jev-latest","answers":{
+                          "claim0":{"type":"noul","noul":0.10},
+                          "risk":{"type":"score","score":0.4,"confidence":0.8,
+                            "probabilities":{"0":0.7,"1":0.2,"2":0.1},
+                            "legend":{"0":"Low","1":"Medium","2":"High"}}},
+                         "usage":{"input_tokens":1,"output_tokens":1}}
+                        """, MediaType.APPLICATION_JSON));
+
+        var result = tools.gate("diff --git a/x.java b/x.java", "1 test failed",
+                List.of("all tests pass"));
+
+        assertThat(result.decision()).isEqualTo("review");
+        assertThat(result.claims().get(0).supported()).isFalse();
+    }
+
+    @Test
     void failuresThrowASanitizedExceptionInsteadOfLeakingTheResponseBody() {
         server.expect(requestTo("https://api.typesafe.ai/v1/systemone"))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body("{\"error\":\"slow down\"}")
